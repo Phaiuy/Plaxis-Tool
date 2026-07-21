@@ -62,17 +62,41 @@ Sửa file [`config.json`](./config.json):
 
 ## Chạy
 
+Có 2 cách chạy tool:
+
+### Cách A — Chạy Python bên ngoài (khuyến nghị cho hotkey)
+
+1. Trong PLAXIS: `Expert → Configure remote scripting server`, đặt port + password, bấm **Start server**.
+2. Điền port + password vào `config.json`.
+3. Chạy bằng Python hệ thống (nơi đã cài `keyboard`):
+
 ```bash
 python run.py
 ```
 
-Hoặc:
+### Cách B — Chạy trực tiếp từ Expert của PLAXIS (Run Python tool)
 
-```bash
-python -m plaxis_hotkeys.main
-```
+Chạy tool bằng chính PLAXIS, không cần khai báo port/password thủ công — PLAXIS
+tự truyền thông tin kết nối vào script.
 
-Kiểm tra bảng phím tắt mà không cần kết nối Plaxis:
+1. Cài `keyboard` vào **Python mà PLAXIS dùng** (chỉ cần làm 1 lần):
+
+   ```bat
+   "<thư mục cài PLAXIS>\python\python.exe" -m pip install keyboard
+   ```
+
+2. Trong PLAXIS Input: `Expert → Python → Run...` và chọn file
+   [`plaxis_tool.py`](./plaxis_tool.py).
+   (Hoặc thêm `plaxis_tool.py` vào danh sách Python tools của Expert menu để bấm chạy nhanh.)
+
+3. PLAXIS truyền port + password của remote scripting server hiện tại vào script;
+   tool tự nhận qua tham số dòng lệnh (xem `resolve_connection` trong
+   `plaxis_hotkeys/config.py`). Nếu PLAXIS không truyền, tool đọc từ `config.json`.
+
+> Thứ tự ưu tiên thông tin kết nối: **tham số PLAXIS truyền vào → biến môi trường
+> `PLAXIS_HOST/PLAXIS_PORT/PLAXIS_PASSWORD` → `config.json`**.
+
+### Kiểm tra nhanh (không cần PLAXIS)
 
 ```bash
 python run.py --no-connect
@@ -91,7 +115,8 @@ python run.py --no-connect
 Plaxis-Tool/
 ├── config.json                 # Cấu hình kết nối + phím tắt
 ├── requirements.txt
-├── run.py                      # Điểm khởi chạy nhanh
+├── run.py                      # Điểm khởi chạy nhanh (Cách A)
+├── plaxis_tool.py              # Entry cho Expert → Python → Run (Cách B)
 └── plaxis_hotkeys/
     ├── config.py               # Đọc cấu hình
     ├── plaxis_client.py        # Kết nối & gửi lệnh tới Plaxis

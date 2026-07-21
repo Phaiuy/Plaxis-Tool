@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, List, Optional
 
 # Đường dẫn config mặc định: config.json ở thư mục gốc dự án
 DEFAULT_CONFIG_PATH = os.path.join(
@@ -56,6 +56,54 @@ class AppConfig:
             ),
             shortcuts=dict(data.get("shortcuts", {}) or {}),
         )
+
+
+def resolve_connection(
+    base: ConnectionConfig,
+    argv_tokens: Optional[List[str]] = None,
+) -> ConnectionConfig:
+    """Ghi đè thông tin kết nối theo thứ tự ưu tiên (cao -> thấp):
+
+    1. Tham số dòng lệnh do PLAXIS truyền vào khi chạy qua Expert → Python → Run.
+       PLAXIS truyền port (số) và password. Ví dụ argv thừa: ['10000', 'AbCd1234'].
+    2. Biến môi trường PLAXIS_HOST / PLAXIS_PORT / PLAXIS_PASSWORD.
+    3. Giá trị trong config.json (base).
+
+    Trả về một ConnectionConfig mới đã hợp nhất.
+    """
+    host = base.host
+    port = base.port
+    password = base.password
+
+    # --- (3) đã có trong base; (2) biến môi trường ---
+    env_host = os.environ.get("PLAXIS_HOST")
+    env_port = os.environ.get("PLAXIS_PORT")
+    env_pw = os.environ.get("PLAXIS_PASSWORD")
+    if env_host:
+        host = env_host
+    if env_port and env_port.isdigit():
+        port = int(env_port)
+    if env_pw:
+        password = env_pw
+
+    # --- (1) tham số dòng lệnh PLAXIS truyền vào ---
+    tokens = [t for t in (argv_tokens or []) if t]
+    port_from_argv = None
+    for tok in tokens:
+        if tok.isdigit():
+            port_from_argv = int(tok)
+            port = port_from_argv
+            break
+    # Password: token không phải là port và không phải hostname phổ biến.
+    for tok in tokens:
+        if tok.isdigit():
+            continue
+        if tok.lower() in ("localhost", "127.0.0.1"):
+            host = tok
+            continue
+        password = tok
+
+    return ConnectionConfig(host=host, port=port, password=password)
 
 
 def load_config(path: str | None = None) -> AppConfig:

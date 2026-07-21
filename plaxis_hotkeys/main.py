@@ -9,7 +9,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from .config import load_config
+from .config import load_config, resolve_connection
 from .hotkey_manager import HotkeyManager
 from .plaxis_client import PlaxisClient
 
@@ -26,15 +26,20 @@ def main(argv: list[str] | None = None) -> int:
         "--no-connect", action="store_true",
         help="Chỉ hiển thị bảng phím tắt, không kết nối Plaxis (để kiểm tra).",
     )
-    args = parser.parse_args(argv)
+    # parse_known_args: PLAXIS (Expert → Python → Run) truyền thêm port/password
+    # dưới dạng tham số dòng lệnh — ta giữ lại trong `extra` để hợp nhất.
+    args, extra = parser.parse_known_args(argv)
 
     cfg = load_config(args.config)
+    conn = resolve_connection(cfg.connection, extra)
 
     print("=" * 50)
     print(" Plaxis Hotkey Tool")
     print("=" * 50)
+    print(f"Kết nối: {conn.host}:{conn.port}"
+          + (" (có password)" if conn.password else " (không password)"))
 
-    client = PlaxisClient(cfg.connection)
+    client = PlaxisClient(conn)
     if not args.no_connect:
         try:
             client.connect()
