@@ -69,3 +69,13 @@ ISOLATABLE_COLLECTIONS = [
 # Unisolate co the khoi phuc chinh xac. De None de dung thu muc temp mac dinh.
 STATE_DIR = None  # None -> tempfile.gettempdir()
 STATE_FILENAME = "plaxis_isolate_state.json"
+
+# ---------------------------------------------------------------------------
+# 5) Ghi log ket qua ra file
+# ---------------------------------------------------------------------------
+# QUAN TRONG: khi PLAXIS chay Python tool, output cua print() KHONG hien trong
+# command line / session history. Vi vay tool ghi ket qua (so doi tuong an/hien,
+# canh bao...) ra file de ban mo doc. File duoc ghi vao Desktop neu duoc, neu
+# khong thi Home, roi den Temp.
+LOG_TO_FILE = True
+LOG_FILENAME = "PLAXIS_isolate_log.txt"

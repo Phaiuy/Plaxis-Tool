@@ -32,6 +32,84 @@ except (ImportError, ValueError):  # chay truc tiep, khong phai dang package
 
 
 # ===========================================================================
+#  Ghi log (print() cua PLAXIS tool KHONG hien tren man hinh -> ghi ra file)
+# ===========================================================================
+_LOG_PATH = [None]  # cache duong dan file log da chon
+
+
+def _log_targets():
+    targets = []
+    try:
+        home = os.path.expanduser("~")
+    except Exception:
+        home = None
+    if home:
+        targets.append(os.path.join(home, "Desktop", config.LOG_FILENAME))
+        targets.append(os.path.join(home, config.LOG_FILENAME))
+    try:
+        targets.append(os.path.join(tempfile.gettempdir(), config.LOG_FILENAME))
+    except Exception:
+        pass
+    return targets
+
+
+def _choose_log_path():
+    if _LOG_PATH[0] is not None:
+        return _LOG_PATH[0]
+    for path in _log_targets():
+        parent = os.path.dirname(path)
+        if parent and not os.path.isdir(parent):
+            continue
+        try:
+            with open(path, "a"):
+                pass
+            _LOG_PATH[0] = path
+            return path
+        except Exception:
+            continue
+    _LOG_PATH[0] = ""  # khong ghi duoc file nao
+    return ""
+
+
+def log_reset(title):
+    """Bat dau mot phien log moi (ghi de file cu), voi tieu de + thoi diem."""
+    if not getattr(config, "LOG_TO_FILE", True):
+        return
+    import datetime
+    path = _choose_log_path()
+    if not path:
+        return
+    try:
+        with open(path, "w") as fh:
+            fh.write("=== {} === {}\n".format(title, datetime.datetime.now()))
+    except Exception:
+        pass
+
+
+def log(msg=""):
+    """In ra stdout VA ghi vao file log (de nguoi dung xem duoc trong PLAXIS)."""
+    try:
+        print(msg)
+    except Exception:
+        pass
+    if not getattr(config, "LOG_TO_FILE", True):
+        return
+    path = _choose_log_path()
+    if not path:
+        return
+    try:
+        with open(path, "a") as fh:
+            fh.write(msg + "\n")
+    except Exception:
+        pass
+
+
+def log_path():
+    """Tra ve duong dan file log dang dung (de bao cho nguoi dung)."""
+    return _LOG_PATH[0] or ""
+
+
+# ===========================================================================
 #  Ket noi / lay g_i
 # ===========================================================================
 def get_g_i(g_i=None):
@@ -303,8 +381,8 @@ def _save_state(g_i, records):
         with open(path, "w") as fh:
             json.dump(records, fh)
     except Exception as exc:
-        print("Canh bao: khong luu duoc trang thai ({}). "
-              "Unisolate se chi 'hien tat ca'.".format(exc))
+        log("Canh bao: khong luu duoc trang thai ({}). "
+            "Unisolate se chi 'hien tat ca'.".format(exc))
 
 
 def _load_state(g_i):
@@ -336,13 +414,16 @@ def isolate(g_i=None, verbose=True):
     Tra ve dict tom tat: {hidden, kept, skipped}.
     """
     g_i = get_g_i(g_i)
+    if verbose:
+        log_reset("ISOLATE")
 
     selection = get_selection(g_i)
     if not selection:
-        raise RuntimeError(
-            "Chua chon doi tuong nao. Hay chon it nhat mot doi tuong tren vung "
-            "ve (hoac trong Model explorer) roi chay lai Isolate."
-        )
+        msg = ("Chua chon doi tuong nao. Hay chon it nhat mot doi tuong tren "
+               "vung ve (hoac trong Model explorer) roi chay lai Isolate.")
+        if verbose:
+            log(msg)
+        raise RuntimeError(msg)
 
     selected_keys = set(_obj_key(o) for o in selection)
     all_objects = collect_all_objects(g_i)
@@ -382,17 +463,19 @@ def isolate(g_i=None, verbose=True):
     _save_state(g_i, records)
 
     if verbose:
-        print("Isolate xong: giu hien {} | an {} | bo qua (khong co thuoc tinh "
-              "hien/an) {}.".format(kept, hidden, skipped))
+        log("Isolate xong: giu hien {} | an {} | bo qua (khong co thuoc tinh "
+            "hien/an) {}.".format(kept, hidden, skipped))
         if hidden == 0 and (skipped > 0 or kept > 0):
-            print("")
-            print("!!! KHONG AN DUOC DOI TUONG NAO.")
-            print("    Phien ban PLAXIS cua ban dung ten thuoc tinh hien/an khac "
-                  "voi mac dinh (Visible/Visibility/Show/Shown), hoac khong ho "
-                  "tro dieu khien hien/an tu Python.")
-            print("    => Chay 'plx_inspect.py' (chon 1 doi tuong roi chay) de "
-                  "PLAXIS liet ke dung ten thuoc tinh, sau do them ten do vao "
-                  "DAU config.VISIBILITY_PROPERTIES.")
+            log("")
+            log("!!! KHONG AN DUOC DOI TUONG NAO.")
+            log("    Phien ban PLAXIS cua ban dung ten thuoc tinh hien/an khac "
+                "voi mac dinh (Visible/Visibility/Show/Shown), hoac khong ho "
+                "tro dieu khien hien/an tu Python.")
+            log("    => Chay 'plx_inspect.py' (chon 1 doi tuong roi chay) de "
+                "PLAXIS liet ke dung ten thuoc tinh, sau do them ten do vao "
+                "DAU config.VISIBILITY_PROPERTIES.")
+        if log_path():
+            log("(Ket qua nay duoc ghi tai: {})".format(log_path()))
 
     return {"hidden": hidden, "kept": kept, "skipped": skipped}
 
@@ -403,11 +486,13 @@ def unisolate(g_i=None, verbose=True):
     Neu khong tim thay file trang thai -> chuyen sang show_all().
     """
     g_i = get_g_i(g_i)
+    if verbose:
+        log_reset("UNISOLATE")
 
     records = _load_state(g_i)
     if not records:
         if verbose:
-            print("Khong co trang thai da luu -> hien tat ca doi tuong.")
+            log("Khong co trang thai da luu -> hien tat ca doi tuong.")
         return show_all(g_i, verbose=verbose)
 
     index = {_obj_key(o): o for o in collect_all_objects(g_i)}
@@ -424,10 +509,12 @@ def unisolate(g_i=None, verbose=True):
     _clear_state(g_i)
 
     if verbose:
-        print("Unisolate xong: khoi phuc {} doi tuong"
-              "{}.".format(restored,
-                           " (bo qua {} khong tim thay)".format(missing)
-                           if missing else ""))
+        log("Unisolate xong: khoi phuc {} doi tuong"
+            "{}.".format(restored,
+                         " (bo qua {} khong tim thay)".format(missing)
+                         if missing else ""))
+        if log_path():
+            log("(Ket qua nay duoc ghi tai: {})".format(log_path()))
     return {"restored": restored, "missing": missing}
 
 
@@ -440,5 +527,7 @@ def show_all(g_i=None, verbose=True):
             shown += 1
     _clear_state(g_i)
     if verbose:
-        print("Da hien lai {} doi tuong.".format(shown))
+        log("Da hien lai {} doi tuong.".format(shown))
+        if log_path():
+            log("(Ket qua nay duoc ghi tai: {})".format(log_path()))
     return {"shown": shown}

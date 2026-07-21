@@ -1,90 +1,199 @@
 # -*- coding: utf-8 -*-
 """
-PLAXIS INSPECT - cong cu chan doan de tim dung thuoc tinh dieu khien HIEN/AN.
+PLAXIS INSPECT (ban ghi ra FILE) - tim dung thuoc tinh dieu khien HIEN/AN.
 
-Vi sao can file nay?
-  API cua PLAXIS Input dat/doi thuoc tinh qua setproperties()/g_i.set()/gan
-  truc tiep, nhung TEN thuoc tinh dieu khien hien/an tren vung ve (neu co) khac
-  nhau giua cac phien ban. Script nay hoi CHINH PLAXIS cua ban de liet ke ra.
+VI SAO BAN KHONG THAY GI KHI CHAY?
+  Khi PLAXIS chay mot Python tool, output cua print() KHONG hien trong command
+  line / session history (command line chi hien lenh PLAXIS). Stdout cua Python
+  thuong bi an. Vi vay file nay GHI KET QUA RA FILE de ban mo doc.
 
-Cach dung:
+KET QUA DUOC GHI RA (theo thu tu uu tien noi ghi duoc):
+  - <Desktop>\\PLAXIS_inspect_output.txt
+  - <thu muc Home>\\PLAXIS_inspect_output.txt
+  - <thu muc Temp>\\PLAXIS_inspect_output.txt
+  - <thu muc chua script>\\PLAXIS_inspect_output.txt
+
+CACH DUNG:
   1. Chon 1 doi tuong trong PLAXIS (vung ve hoac Model explorer).
-  2. Chay file nay (Expert > Python, hoac standalone).
-  3. Doc phan ket qua in ra:
-        - Toan bo thuoc tinh cua doi tuong (echo)
-        - Cac thuoc tinh co gia tri kieu True/False (ung vien hien/an)
-  4. Neu thay ten nao ro rang la "hien/an" (vi du Visible, Show, ...),
-     them ten do vao DAU danh sach VISIBILITY_PROPERTIES trong
-     plaxis_isolate/config.py roi chay lai Isolate.
-  5. Neu KHONG co thuoc tinh boolean nao lien quan hien/an -> phien ban PLAXIS
-     nay khong cho dieu khien hien/an tu Python (gui thong tin nay lai giup toi).
+  2. Chay file nay (Expert tool hoac trong cua so Python cua PLAXIS).
+  3. Mo file PLAXIS_inspect_output.txt tren Desktop va doc / gui lai cho toi.
 
-Gui lai toan bo ket qua in ra neu ban muon toi xac dinh gium.
+File nay CO TINH DOC LAP (khong phu thuoc package) va CHONG LOI, de chac chan
+luon tao ra file ket qua ke ca khi co su co.
 """
 
 import os
-import re
 import sys
+import io
+import traceback
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-if _HERE not in sys.path:
-    sys.path.insert(0, _HERE)
+try:
+    import tempfile
+except Exception:
+    tempfile = None
 
-from plaxis_isolate import core, config
 
-
-def _echo_text(g_i, obj):
-    """Lay chuoi mo ta day du cua doi tuong (danh sach thuoc tinh + gia tri)."""
-    # Cach 1: obj.echo()
+# ==========================================================================
+#  Ghi file ket qua (bulletproof)
+# ==========================================================================
+def _output_targets():
+    targets = []
     try:
-        txt = obj.echo()
-        if txt:
-            return str(txt)
+        home = os.path.expanduser("~")
+    except Exception:
+        home = None
+    if home:
+        targets.append(os.path.join(home, "Desktop", "PLAXIS_inspect_output.txt"))
+        targets.append(os.path.join(home, "PLAXIS_inspect_output.txt"))
+    if tempfile is not None:
+        try:
+            targets.append(os.path.join(tempfile.gettempdir(),
+                                        "PLAXIS_inspect_output.txt"))
+        except Exception:
+            pass
+    try:
+        here = os.path.dirname(os.path.abspath(__file__))
+        targets.append(os.path.join(here, "PLAXIS_inspect_output.txt"))
     except Exception:
         pass
-    # Cach 2: g_i.echo(obj)
+    return targets
+
+
+def write_report(text):
+    written = []
+    for path in _output_targets():
+        try:
+            parent = os.path.dirname(path)
+            if parent and not os.path.isdir(parent):
+                continue
+            with io.open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            written.append(path)
+        except Exception:
+            continue
+    # In ra stdout phong khi co console
     try:
-        txt = g_i.echo(obj)
-        if txt:
-            return str(txt)
+        print(text)
+        if written:
+            print("\n>>> Da ghi ket qua ra:")
+            for p in written:
+                print("    " + p)
     except Exception:
         pass
+    return written
+
+
+# ==========================================================================
+#  Tim g_i (nhung trong PLAXIS hoac ket noi standalone)
+# ==========================================================================
+def find_g_i(lines):
+    # 1) Bien g_i do PLAXIS bom vao globals cua script
+    g = globals().get("g_i", None)
+    if g is not None:
+        lines.append("Nguon g_i: globals() cua script (PLAXIS bom vao).")
+        return g
+
+    # 2) builtins / __main__
+    try:
+        import builtins
+    except ImportError:
+        import __builtin__ as builtins
+    if hasattr(builtins, "g_i"):
+        lines.append("Nguon g_i: builtins.")
+        return getattr(builtins, "g_i")
+    try:
+        import __main__
+        if hasattr(__main__, "g_i"):
+            lines.append("Nguon g_i: __main__.")
+            return getattr(__main__, "g_i")
+    except Exception:
+        pass
+
+    # 3) Ket noi remote scripting server
+    try:
+        from plxscripting.easy import new_server
+    except ImportError:
+        lines.append("Khong co bien g_i s5n va khong import duoc plxscripting.")
+        lines.append("=> Hay chay file nay TU BEN TRONG PLAXIS (Expert > Python),")
+        lines.append("   hoac bat remote scripting server de chay standalone.")
+        return None
+
+    for port in (10000, 10001):
+        try:
+            s_i, g = new_server("localhost", port, timeout=10)
+            _ = s_i.name
+            lines.append("Nguon g_i: ket noi remote scripting server localhost:{}."
+                         .format(port))
+            return g
+        except Exception as exc:
+            lines.append("  - khong ket noi duoc port {}: {}".format(port, exc))
     return None
 
 
-def _boolean_candidates_from_echo(text):
-    """Tim cac ten thuoc tinh co gia tri True/False trong chuoi echo."""
-    found = []
-    if not text:
-        return found
-    for line in text.splitlines():
-        # Cac dong echo thuong dang: "PropertyName: True" hoac "PropertyName True"
-        m = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*[:=]?\s*(True|False)\b", line)
-        if m:
-            found.append((m.group(1), m.group(2)))
-    return found
+# ==========================================================================
+#  Doc thuoc tinh
+# ==========================================================================
+CANDIDATE_NAMES = ["Visible", "Visibility", "Show", "Shown", "IsVisible",
+                   "Hidden", "Hide", "ShowInModel", "VisibleInModel"]
 
 
-def _probe_named_properties(obj):
-    """Thu doc lan luot cac ten trong VISIBILITY_PROPERTIES tren doi tuong."""
-    results = []
-    for name in config.VISIBILITY_PROPERTIES:
-        prop = core._get_property(obj, name)
-        if prop is None:
-            results.append((name, "khong co"))
+def _get_prop(obj, name):
+    try:
+        return getattr(obj, name)
+    except Exception:
+        return None
+
+
+def _read_value(prop):
+    if hasattr(prop, "value"):
+        try:
+            return prop.value
+        except Exception:
+            pass
+    try:
+        return str(prop)
+    except Exception:
+        return None
+
+
+def _obj_name(obj):
+    prop = _get_prop(obj, "Name")
+    if prop is not None:
+        try:
+            return str(prop.value)
+        except Exception:
+            pass
+    try:
+        return str(obj)
+    except Exception:
+        return "<obj>"
+
+
+def _echo_text(g_i, obj):
+    for getter in (lambda: obj.echo(), lambda: g_i.echo(obj)):
+        try:
+            txt = getter()
+            if txt:
+                return str(txt)
+        except Exception:
             continue
-        val = core._read_value(prop)
-        results.append((name, "= {}".format(val)))
-    return results
+    return None
 
 
-def _sample_object(g_i):
-    """Lay 1 doi tuong de kiem tra: uu tien selection, roi den collection dau tien."""
-    sel = core.get_selection(g_i)
+def _sample_object(g_i, lines):
+    # Uu tien selection
+    try:
+        sel = list(g_i.selection)
+    except Exception as exc:
+        sel = []
+        lines.append("Khong doc duoc g_i.selection: {}".format(exc))
     if sel:
-        return sel[0], "selection"
-    for coll_name in config.ISOLATABLE_COLLECTIONS:
-        coll = core._get_property(g_i, coll_name)
+        return sel[0], "selection ({} doi tuong dang chon)".format(len(sel))
+
+    lines.append("Vung chon rong -> thu lay doi tuong dau tien tu cac collection.")
+    for coll_name in ["Points", "Lines", "Surfaces", "Volumes", "Soils",
+                      "SoilVolumes", "Plates", "Beams", "Geogrids", "Anchors"]:
+        coll = _get_prop(g_i, coll_name)
         if coll is None:
             continue
         try:
@@ -96,56 +205,93 @@ def _sample_object(g_i):
     return None, None
 
 
-def main():
-    g_i = globals().get("g_i", None)
-    g_i = core.get_g_i(g_i)
+# ==========================================================================
+#  Main
+# ==========================================================================
+def build_report():
+    import datetime
+    L = []
+    L.append("=" * 68)
+    L.append("PLAXIS INSPECT - tim thuoc tinh dieu khien HIEN/AN")
+    L.append("Thoi diem: {}".format(datetime.datetime.now()))
+    L.append("Python: {}".format(sys.version.replace("\n", " ")))
+    L.append("=" * 68)
 
-    obj, source = _sample_object(g_i)
-    print("=" * 64)
-    print("PLAXIS INSPECT - tim thuoc tinh dieu khien HIEN/AN")
-    print("=" * 64)
+    g_i = find_g_i(L)
+    if g_i is None:
+        L.append("")
+        L.append("KHONG LAY DUOC g_i -> khong the kiem tra. Xem huong dan o tren.")
+        return "\n".join(L)
 
+    obj, source = _sample_object(g_i, L)
+    L.append("")
     if obj is None:
-        print("Khong tim thay doi tuong nao de kiem tra. Hay chon 1 doi tuong "
-              "roi chay lai.")
-        return
+        L.append("Khong tim thay doi tuong nao de kiem tra.")
+        L.append("Hay tao/chon it nhat 1 doi tuong roi chay lai.")
+        return "\n".join(L)
 
-    print("Doi tuong kiem tra: {}  (nguon: {})".format(core._obj_key(obj), source))
-    print("-" * 64)
+    L.append("Doi tuong kiem tra: {}   (nguon: {})".format(_obj_name(obj), source))
+    L.append("-" * 68)
 
-    # 1) Thu cac ten dang cau hinh
-    print("[1] Thu cac ten trong config.VISIBILITY_PROPERTIES:")
-    for name, status in _probe_named_properties(obj):
-        print("    - {:<14} {}".format(name, status))
-    print("-" * 64)
+    # [1] Thu cac ten ung vien
+    L.append("[1] Thu doc cac ten thuoc tinh hien/an thuong gap:")
+    any_found = False
+    for name in CANDIDATE_NAMES:
+        prop = _get_prop(obj, name)
+        if prop is None:
+            L.append("    - {:<16} : KHONG CO".format(name))
+        else:
+            any_found = True
+            L.append("    - {:<16} : CO  (gia tri = {})".format(
+                name, _read_value(prop)))
+    if any_found:
+        L.append("    => Ten nao ghi 'CO' chinh la ung vien -> them vao DAU")
+        L.append("       config.VISIBILITY_PROPERTIES roi chay lai Isolate.")
+    else:
+        L.append("    => Khong ten nao ton tai tren doi tuong nay.")
+    L.append("-" * 68)
 
-    # 2) Echo toan bo thuoc tinh
+    # [2] echo toan bo
     text = _echo_text(g_i, obj)
-    print("[2] echo() cua doi tuong (toan bo thuoc tinh):")
+    L.append("[2] echo() cua doi tuong (TOAN BO thuoc tinh - phan quan trong nhat):")
     if text:
         for line in text.splitlines():
-            print("    " + line)
+            L.append("    " + line)
     else:
-        print("    (khong lay duoc echo)")
-    print("-" * 64)
+        L.append("    (khong lay duoc echo cua doi tuong nay)")
+    L.append("-" * 68)
 
-    # 3) Cac ung vien boolean (co the la thuoc tinh hien/an)
-    print("[3] Cac thuoc tinh co gia tri True/False (ung vien hien/an):")
-    cands = _boolean_candidates_from_echo(text)
+    # [3] Cac thuoc tinh boolean tu echo
+    L.append("[3] Cac thuoc tinh co gia tri True/False (ung vien hien/an):")
+    import re
+    cands = []
+    if text:
+        for line in text.splitlines():
+            m = re.search(r"([A-Za-z_][A-Za-z0-9_]*)\s*[:=]?\s*(True|False)\b", line)
+            if m:
+                cands.append((m.group(1), m.group(2)))
     if cands:
-        for name, val in cands:
-            print("    - {:<24} = {}".format(name, val))
-        print("")
-        print("    => Neu thay ten nao ro rang la hien/an (vd Visible/Show),")
-        print("       them vao DAU config.VISIBILITY_PROPERTIES roi chay Isolate.")
+        for n, v in cands:
+            L.append("    - {:<28} = {}".format(n, v))
     else:
-        print("    (khong tim thay thuoc tinh boolean nao trong echo)")
-        print("    => Co the phien ban PLAXIS nay khong cho dieu khien hien/an")
-        print("       tu Python. Hay gui lai ket qua nay de toi tu van tiep.")
-    print("=" * 64)
+        L.append("    (khong tim thay thuoc tinh boolean nao)")
+    L.append("=" * 68)
+    L.append("HUONG DAN:")
+    L.append(" - Neu thay ten ro rang la hien/an (Visible/Show/Hidden...),")
+    L.append("   them vao DAU config.VISIBILITY_PROPERTIES roi chay lai Isolate.")
+    L.append(" - Neu khong co ten nao phu hop, gui lai TOAN BO file nay + phien")
+    L.append("   ban PLAXIS (2D/3D, nam) de duoc tu van huong khac.")
+    L.append("=" * 68)
+    return "\n".join(L)
 
 
-if __name__ == "__main__":
-    main()
-else:
-    main()
+def main():
+    try:
+        report = build_report()
+    except Exception:
+        report = ("PLAXIS INSPECT gap loi khi chay:\n\n" +
+                  traceback.format_exc())
+    write_report(report)
+
+
+main()

@@ -2,30 +2,59 @@
 """
 PLAXIS SHOW ALL - hien lai tat ca doi tuong (khong phu thuoc file trang thai).
 
-Dung cho CA PLAXIS 2D va 3D. Huu ich khi ban chi muon "reset" hien thi ma
-khong quan tam trang thai truoc do.
+Dung cho CA PLAXIS 2D va 3D. Ket qua ghi ra file (mac dinh:
+<Desktop>\\PLAXIS_isolate_log.txt), vi print() khong hien tren command line.
 """
 
 import os
 import sys
+import traceback
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
+
+def _script_dir():
+    try:
+        return os.path.dirname(os.path.abspath(__file__))
+    except Exception:
+        return os.getcwd()
+
+
+_HERE = _script_dir()
 if _HERE not in sys.path:
     sys.path.insert(0, _HERE)
 
-from plaxis_isolate import core
+
+def _emergency_log(text):
+    try:
+        import io
+        home = os.path.expanduser("~")
+        for path in (os.path.join(home, "Desktop", "PLAXIS_isolate_log.txt"),
+                     os.path.join(home, "PLAXIS_isolate_log.txt")):
+            parent = os.path.dirname(path)
+            if parent and not os.path.isdir(parent):
+                continue
+            with io.open(path, "w", encoding="utf-8") as fh:
+                fh.write(text)
+            return
+    except Exception:
+        pass
 
 
 def main():
     g_i = globals().get("g_i", None)
     try:
+        from plaxis_isolate import core
         core.show_all(g_i)
-    except Exception as exc:
-        print("SHOW ALL loi: {}".format(exc))
-        raise
+    except Exception:
+        tb = "SHOW ALL gap loi:\n\n" + traceback.format_exc()
+        try:
+            from plaxis_isolate import core
+            core.log(tb)
+        except Exception:
+            _emergency_log(tb)
+        try:
+            print(tb)
+        except Exception:
+            pass
 
 
-if __name__ == "__main__":
-    main()
-else:
-    main()
+main()

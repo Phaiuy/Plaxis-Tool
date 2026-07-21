@@ -61,6 +61,22 @@ Sau khi thêm, các lệnh sẽ hiện trong menu **Expert** và có thể gán 
 
 ---
 
+## 2b. Kết quả in ra ở đâu? (QUAN TRỌNG)
+
+Khi PLAXIS chạy một Python tool, **`print()` KHÔNG hiện trong command line /
+session history** — command line chỉ hiển thị lệnh PLAXIS, còn stdout của Python
+thường bị ẩn. Đó là lý do bạn "không thấy gì".
+
+Vì vậy tool **ghi kết quả ra file** ở nơi dễ tìm (thử lần lượt):
+
+1. `<Desktop>\PLAXIS_isolate_log.txt` (Isolate/Unisolate/Show All)
+2. `<Desktop>\PLAXIS_inspect_output.txt` (Inspect)
+3. Nếu không ghi được Desktop → thư mục Home → thư mục Temp.
+
+Sau khi chạy tool, hãy **mở file `.txt` trên Desktop** để xem kết quả.
+
+---
+
 ## 3. Cách sử dụng
 
 1. **Chọn** một hoặc nhiều đối tượng trên vùng vẽ (hoặc trong Model explorer).
@@ -133,7 +149,7 @@ Isolate mà không có đối tượng nào bị ẩn, hãy làm bước chẩn 
 
 1. Chọn **1 đối tượng** bất kỳ trong PLAXIS.
 2. Chạy **`plx_inspect.py`** (đăng ký như một Expert tool, hoặc chạy standalone).
-3. Đọc kết quả in ra:
+3. Mở file **`PLAXIS_inspect_output.txt` trên Desktop** và đọc:
    - Mục **[2] echo()** liệt kê **toàn bộ thuộc tính** của đối tượng.
    - Mục **[3]** liệt kê các thuộc tính có giá trị `True/False` — ứng viên hiện/ẩn.
 4. Nếu thấy tên nào rõ ràng là hiện/ẩn (ví dụ `Visible`, `Show`…), **thêm tên đó
