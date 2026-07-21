@@ -98,8 +98,22 @@ tự truyền thông tin kết nối vào script.
 
 ### Kiểm tra nhanh (không cần PLAXIS)
 
+Xem bảng phím tắt:
+
 ```bash
 python run.py --no-connect
+```
+
+Chạy thử toàn bộ lệnh với **PLAXIS giả lập** (không cần cài `plxscripting`/`keyboard`):
+
+```bash
+python run.py --selftest
+```
+
+Chạy bộ test tự động:
+
+```bash
+python -m unittest discover -s tests -v
 ```
 
 ## Cách dùng

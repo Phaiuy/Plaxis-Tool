@@ -70,9 +70,23 @@ class HotkeyManager:
     # ------------------------------------------------------------------ #
     # Đăng ký / chạy
     # ------------------------------------------------------------------ #
+    @staticmethod
+    def _import_keyboard():
+        """Import thư viện keyboard, báo lỗi rõ ràng nếu thiếu."""
+        try:
+            import keyboard  # noqa: F401
+            return keyboard
+        except ImportError as exc:
+            raise RuntimeError(
+                "Chưa cài thư viện 'keyboard' (cần để bắt phím tắt toàn cục).\n"
+                "  Cài đặt: pip install keyboard\n"
+                "  Nếu chạy qua Expert menu của PLAXIS, cài vào đúng Python của PLAXIS:\n"
+                '    "<thư mục PLAXIS>\\python\\python.exe" -m pip install keyboard'
+            ) from exc
+
     def register(self, shortcuts: Dict[str, str]) -> None:
         """Đăng ký các phím tắt từ config: {tên_lệnh: tổ_hợp_phím}."""
-        import keyboard
+        keyboard = self._import_keyboard()
 
         actions = self._build_actions()
         for command, hotkey in shortcuts.items():
@@ -87,10 +101,11 @@ class HotkeyManager:
             print(f"[hotkey] {hotkey:<16} -> {command}")
 
     def run_forever(self) -> None:
-        """Chạy và lắng nghe phím tắt cho tới khi nhấn ESC (giữ Ctrl+ESC)."""
-        import keyboard
+        """Lắng nghe phím tắt cho tới khi nhấn Ctrl+Alt+Q để thoát."""
+        keyboard = self._import_keyboard()
 
         print("\nĐang lắng nghe phím tắt... Nhấn Ctrl+Alt+Q để thoát.")
-        keyboard.add_hotkey("ctrl+alt+q", lambda: keyboard.unhook_all())
+        # keyboard.wait tự chặn tới khi tổ hợp phím được nhấn; gỡ hook sau khi thoát.
         keyboard.wait("ctrl+alt+q")
+        keyboard.unhook_all()
         print("Đã dừng lắng nghe phím tắt.")
