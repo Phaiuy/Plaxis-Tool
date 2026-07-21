@@ -22,6 +22,7 @@ Cùng một mã nguồn dùng chung cho **cả 2D lẫn 3D**.
 | `plx_isolate.py`   | **Isolate** – chỉ hiện đối tượng đang chọn, ẩn phần còn lại |
 | `plx_unisolate.py` | **Unisolate** – khôi phục hiện/ẩn về đúng trạng thái trước khi Isolate |
 | `plx_show_all.py`  | **Show All** – hiện lại tất cả đối tượng (reset hiển thị) |
+| `plx_inspect.py`   | **Inspect** – chẩn đoán: in toàn bộ thuộc tính của đối tượng để tìm đúng tên thuộc tính hiện/ẩn |
 | `plaxis_isolate/config.py` | Cấu hình (host/port/password, tên thuộc tính hiện/ẩn, danh sách collection) |
 | `plaxis_isolate/core.py`   | Toàn bộ logic |
 | `tests/test_core.py`       | Bộ kiểm thử bằng PLAXIS giả lập (không cần PLAXIS thật) |
@@ -120,6 +121,27 @@ python tests/test_core.py
 Kết quả mong đợi: *tất cả test PASS* (kiểm tra isolate ẩn đúng phần còn lại,
 isolate nhiều đối tượng, unisolate khôi phục đúng trạng thái cũ, báo lỗi khi
 chưa chọn gì, show_all, và unisolate khi không có file trạng thái).
+
+---
+
+## 6b. QUAN TRỌNG — Nếu Isolate không ẩn được đối tượng nào
+
+PLAXIS Input đặt/đổi thuộc tính qua `setproperties()` / `g_i.set()`, nhưng **tên
+thuộc tính điều khiển hiện/ẩn trên vùng vẽ khác nhau giữa các phiên bản** (và một
+số phiên bản có thể không hỗ trợ điều khiển hiện/ẩn từ Python). Vì vậy nếu chạy
+Isolate mà không có đối tượng nào bị ẩn, hãy làm bước chẩn đoán:
+
+1. Chọn **1 đối tượng** bất kỳ trong PLAXIS.
+2. Chạy **`plx_inspect.py`** (đăng ký như một Expert tool, hoặc chạy standalone).
+3. Đọc kết quả in ra:
+   - Mục **[2] echo()** liệt kê **toàn bộ thuộc tính** của đối tượng.
+   - Mục **[3]** liệt kê các thuộc tính có giá trị `True/False` — ứng viên hiện/ẩn.
+4. Nếu thấy tên nào rõ ràng là hiện/ẩn (ví dụ `Visible`, `Show`…), **thêm tên đó
+   vào đầu** `VISIBILITY_PROPERTIES` trong `plaxis_isolate/config.py`, rồi chạy lại
+   Isolate.
+5. Nếu **không có** thuộc tính boolean nào liên quan hiện/ẩn → phiên bản PLAXIS đó
+   không cho điều khiển hiện/ẩn từ Python; hãy gửi lại kết quả `plx_inspect.py`
+   (kèm phiên bản PLAXIS) để được tư vấn tiếp.
 
 ---
 

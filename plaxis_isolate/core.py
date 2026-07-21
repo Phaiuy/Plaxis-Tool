@@ -384,10 +384,15 @@ def isolate(g_i=None, verbose=True):
     if verbose:
         print("Isolate xong: giu hien {} | an {} | bo qua (khong co thuoc tinh "
               "hien/an) {}.".format(kept, hidden, skipped))
-        if hidden == 0 and skipped > 0:
-            print("Luu y: khong an duoc doi tuong nao. Co the phien ban PLAXIS "
-                  "cua ban dung ten thuoc tinh hien/an khac -> chinh "
-                  "config.VISIBILITY_PROPERTIES.")
+        if hidden == 0 and (skipped > 0 or kept > 0):
+            print("")
+            print("!!! KHONG AN DUOC DOI TUONG NAO.")
+            print("    Phien ban PLAXIS cua ban dung ten thuoc tinh hien/an khac "
+                  "voi mac dinh (Visible/Visibility/Show/Shown), hoac khong ho "
+                  "tro dieu khien hien/an tu Python.")
+            print("    => Chay 'plx_inspect.py' (chon 1 doi tuong roi chay) de "
+                  "PLAXIS liet ke dung ten thuoc tinh, sau do them ten do vao "
+                  "DAU config.VISIBILITY_PROPERTIES.")
 
     return {"hidden": hidden, "kept": kept, "skipped": skipped}
 
