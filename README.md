@@ -86,8 +86,8 @@ tự truyền thông tin kết nối vào script.
    ```
 
 2. Trong PLAXIS Input: `Expert → Python → Run...` và chọn file
-   [`plaxis_tool.py`](./plaxis_tool.py).
-   (Hoặc thêm `plaxis_tool.py` vào danh sách Python tools của Expert menu để bấm chạy nhanh.)
+   [`Shortcut_Command_2025.1.py`](./Shortcut_Command_2025.1.py).
+   (Hoặc thêm file này vào danh sách Python tools của Expert menu để bấm chạy nhanh.)
 
 3. PLAXIS truyền port + password của remote scripting server hiện tại vào script;
    tool tự nhận qua tham số dòng lệnh (xem `resolve_connection` trong
@@ -116,7 +116,7 @@ Plaxis-Tool/
 ├── config.json                 # Cấu hình kết nối + phím tắt
 ├── requirements.txt
 ├── run.py                      # Điểm khởi chạy nhanh (Cách A)
-├── plaxis_tool.py              # Entry cho Expert → Python → Run (Cách B)
+├── Shortcut_Command_2025.1.py  # Entry cho Expert → Python → Run (Cách B)
 └── plaxis_hotkeys/
     ├── config.py               # Đọc cấu hình
     ├── plaxis_client.py        # Kết nối & gửi lệnh tới Plaxis
