@@ -62,6 +62,12 @@ Mỗi lần dùng:
 > `plxscripting` và `tkinter`, nên bảng sẽ hiện dạng cửa sổ. Nếu bản Python đó
 > không có `tkinter`, tool tự động in bảng ra console/log.
 
+> **Cửa sổ console đen (python.exe):** trên Windows, khi PLAXIS chạy tool bằng
+> `python.exe` sẽ có một cửa sổ console đen bật lên trước. Tool đã tự **ẩn**
+> cửa sổ này (Windows API) ngay khi khởi động. Nếu muốn chắc chắn không nhấp
+> nháy chút nào, có thể đăng ký tool trỏ tới bản `pythonw.exe` (chạy không
+> console) thay cho `python.exe`, hoặc đổi đuôi file thành `.pyw`.
+
 ### B) Chạy như script bên ngoài PLAXIS
 
 Mở `plaxis_material_selector.py`, sửa phần cấu hình đầu file cho khớp:

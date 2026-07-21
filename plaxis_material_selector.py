@@ -42,6 +42,7 @@ C) Chạy trực tiếp trong cửa sổ Python của PLAXIS (đã có sẵn bi�
 Author: Plaxis-Tool
 """
 
+import os
 import sys
 
 # --------------------------------------------------------------------------- #
@@ -417,6 +418,41 @@ def _material_type(mat):
 # --------------------------------------------------------------------------- #
 #  Kết nối tới PLAXIS                                                          #
 # --------------------------------------------------------------------------- #
+def hide_console_window():
+    """
+    Ẩn cửa sổ console đen (python.exe) trên Windows.
+
+    Khi PLAXIS chạy tool bằng python.exe (thay vì pythonw.exe), một cửa sổ
+    console đen bật lên trước khi bảng hiện ra. Hàm này gọi Windows API để ẩn
+    ngay cửa sổ đó. Không làm gì trên hệ điều hành khác hoặc khi không có
+    console (đã chạy bằng pythonw.exe).
+    """
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+
+        hwnd = ctypes.windll.kernel32.GetConsoleWindow()
+        if hwnd:
+            ctypes.windll.user32.ShowWindow(hwnd, 0)  # 0 = SW_HIDE
+    except Exception:
+        pass
+
+
+def _show_error(message):
+    """Báo lỗi qua hộp thoại (vì console có thể đã bị ẩn); fallback ra stderr."""
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+
+        root = tk.Tk()
+        root.withdraw()
+        messagebox.showerror("PLAXIS Material Set Selector", message)
+        root.destroy()
+    except Exception:
+        print(message, file=sys.stderr)
+
+
 def connect(host=HOST, port=PORT, password=PASSWORD):
     """
     Kết nối tới PLAXIS Input remote scripting server, trả về (s_i, g_i).
@@ -625,15 +661,16 @@ def run_from_plaxis(g_i):
 
 
 def main():
-    """Điểm vào khi chạy như script độc lập bên ngoài PLAXIS."""
+    """Điểm vào khi chạy như script độc lập / PLAXIS tool bên ngoài PLAXIS."""
+    # Ẩn ngay cửa sổ console đen của python.exe trước khi làm gì khác.
+    hide_console_window()
     try:
         _, g_i = connect()
     except Exception as exc:  # noqa: BLE001
-        print("Không kết nối được PLAXIS: %s" % exc, file=sys.stderr)
-        print(
+        _show_error(
+            "Không kết nối được PLAXIS:\n%s\n\n"
             "Kiểm tra: đã bật remote scripting server trong PLAXIS Input chưa, "
-            "PORT/PASSWORD trong file có đúng không, plxscripting đã cài chưa.",
-            file=sys.stderr,
+            "PORT/PASSWORD trong file có đúng không, plxscripting đã cài chưa." % exc
         )
         sys.exit(1)
     run(g_i)
