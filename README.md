@@ -92,6 +92,13 @@ pms.run_from_plaxis(g_i)
 
 ## Ghi chú
 
+- Khi bấm **Select objects**, tool tự bổ sung cả **hình học cha** của từng
+  feature vào selection — Polygon (2D), SoilVolume/Volume (3D), Line, Surface…
+  (leo theo chuỗi `.Parent`). Nhờ đó đối tượng thực sự được highlight trong
+  model chứ không chỉ chọn "ngầm" feature.
+- Chiều ngược lại cũng được xử lý: nếu bạn chọn tay một Polygon/Volume (hình
+  học) rồi chạy tool, tool sẽ tìm material qua feature con (Soil, Plate…)
+  nằm trong hình học đó.
 - Tool đọc material qua thuộc tính `.Material` của từng đối tượng, có fallback
   cho trường hợp material gán theo phase (staged construction).
 - Trong bảng "toàn bộ material set", các material set đã khai báo nhưng chưa

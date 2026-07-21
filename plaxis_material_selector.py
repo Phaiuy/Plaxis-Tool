@@ -127,8 +127,12 @@ def _object_material(obj, g_i=None):
     """
     Trả về material object gán cho `obj`, hoặc None nếu không có.
 
-    Xử lý cả trường hợp .Material là property thường lẫn property phụ thuộc
-    giai đoạn (staged) - khi đó thử đọc theo từng phase.
+    Xử lý:
+      - .Material là property thường,
+      - .Material phụ thuộc giai đoạn (staged) - thử đọc theo từng phase,
+      - `obj` là HÌNH HỌC (Polygon/SoilVolume/Volume/Line/Surface...) không có
+        .Material trực tiếp - khi đó tìm material qua feature con (Soil,
+        Plate...) nằm trong nó.
     """
     try:
         mat = _value(obj.Material)
@@ -139,7 +143,7 @@ def _object_material(obj, g_i=None):
     if mat is not None and _identification(mat) is not None:
         return mat
 
-    # Fallback: material gán theo phase (staged construction).
+    # Fallback 1: material gán theo phase (staged construction).
     if g_i is not None:
         try:
             phases = list(g_i.Phases)
@@ -152,6 +156,23 @@ def _object_material(obj, g_i=None):
                 staged = None
             if staged is not None and _identification(staged) is not None:
                 return staged
+
+    # Fallback 2: `obj` là hình học -> tìm feature con mang material.
+    # (VD: chọn Polygon_1 / Volume_1 bằng tay thì material nằm ở Soil_1.)
+    for attr in ("Soil", "Plate", "Beam", "Geogrid", "EmbeddedBeam", "Anchor"):
+        try:
+            feature = _value(getattr(obj, attr))
+        except Exception:
+            continue
+        if feature is None:
+            continue
+        try:
+            fmat = _value(feature.Material)
+        except Exception:
+            fmat = None
+        if fmat is not None and _identification(fmat) is not None:
+            return fmat
+
     return mat
 
 
@@ -252,26 +273,87 @@ class MaterialSelector(object):
                 result.append(obj)
         return result
 
-    def select_objects(self, objects):
-        """Đặt selection của PLAXIS Input thành đúng `objects`."""
+    def expand_with_parents(self, objects):
+        """
+        Bổ sung hình học "cha" cho từng feature.
+
+        Trong PLAXIS, feature (Soil, Plate, Geogrid, ...) và hình học chứa nó
+        (Polygon trong 2D, SoilVolume/Volume trong 3D, Line, Surface, ...) là
+        các đối tượng riêng. Muốn select "thật" trong model thì ngoài feature
+        phải chọn cả hình học cha - lấy qua chuỗi thuộc tính .Parent.
+
+        Trả về list đã khử trùng lặp (selection của PLAXIS không nhận
+        phần tử trùng nhau).
+        """
+        result = []
+        seen = set()
+
+        def _key(o):
+            # Khoá khử trùng lặp: ưu tiên tên đối tượng (mỗi lần gọi .Parent
+            # có thể trả về một proxy Python khác nhau cho cùng một đối tượng).
+            name = _object_name(o)
+            return name if name and name != "<object>" else id(o)
+
+        def _add(o):
+            if o is None:
+                return
+            k = _key(o)
+            if k in seen:
+                return
+            seen.add(k)
+            result.append(o)
+
+        for obj in objects:
+            _add(obj)
+            # Leo chuỗi Parent (feature -> polygon/volume/line/surface ...).
+            current = obj
+            for _ in range(5):  # chặn vòng lặp vô hạn
+                try:
+                    parent = _value(current.Parent)
+                except Exception:
+                    break
+                if parent is None:
+                    break
+                k = _key(parent)
+                if k in seen:
+                    break
+                _add(parent)
+                current = parent
+        return result
+
+    def select_objects(self, objects, include_parents=True):
+        """
+        Đặt selection của PLAXIS Input thành `objects`.
+
+        include_parents=True (mặc định): tự bổ sung hình học cha (polygon /
+        soil volume / line / surface ...) của từng feature để đối tượng thực
+        sự được highlight trong model.
+        """
         g_i = self.g_i
+        targets = self.expand_with_parents(objects) if include_parents else list(objects)
+
         # Cách 1 (được plxscripting hỗ trợ chính thức): gán trực tiếp.
         try:
-            g_i.selection = list(objects)
-            return True
+            g_i.selection = targets
+            return len(targets)
         except Exception:
             pass
-        # Cách 2: xoá sạch rồi append từng cái.
+        # Cách 2: xoá sạch rồi append từng cái (bỏ qua cái nào lỗi).
+        appended = 0
         try:
             try:
                 del g_i.selection[:]
             except Exception:
                 pass
-            for obj in objects:
-                g_i.selection.append(obj)
-            return True
+            for obj in targets:
+                try:
+                    g_i.selection.append(obj)
+                    appended += 1
+                except Exception:
+                    continue
+            return appended
         except Exception:
-            return False
+            return appended
 
 
 def _material_type(mat):
@@ -474,8 +556,9 @@ def run(g_i):
 
     def on_select(idents):
         objs = selector.objects_with_identifications(idents)
-        selector.select_objects(objs)
-        return len(objs)
+        # Tự bổ sung hình học cha (polygon / soil volume / line / surface)
+        # để đối tượng thực sự được highlight trong model.
+        return selector.select_objects(objs, include_parents=True)
 
     show_gui(selector, title, table, on_select)
 
