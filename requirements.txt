@@ -1,0 +1,7 @@
+# Plaxis Hotkey Tool - dependencies
+# Thư viện Remote Scripting chính thức của Plaxis (Bentley).
+# Thường được cài kèm khi cài Plaxis, hoặc: pip install plxscripting
+plxscripting
+
+# Bắt phím tắt toàn cục (global hotkeys)
+keyboard>=0.13.5

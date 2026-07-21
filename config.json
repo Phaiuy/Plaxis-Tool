@@ -1,0 +1,18 @@
+{
+  "connection": {
+    "host": "localhost",
+    "port": 10000,
+    "password": ""
+  },
+  "shortcuts": {
+    "delete": "ctrl+shift+d",
+    "array": "ctrl+shift+a",
+    "move": "ctrl+shift+m",
+    "copy": "ctrl+shift+c",
+    "rotate": "ctrl+shift+r",
+    "group": "ctrl+shift+g",
+    "ungroup": "ctrl+shift+u",
+    "undo": "ctrl+shift+z",
+    "redo": "ctrl+shift+y"
+  }
+}
