@@ -649,7 +649,15 @@ def run(g_i):
         )
 
     def on_select(idents, mode="geometry"):
-        objs = selector.objects_with_identifications(idents)
+        # Lấy đối tượng TỪ CHÍNH bảng đang hiển thị, nhờ đó tôn trọng đúng
+        # phạm vi:
+        #   - Có selection ban đầu -> chỉ các đối tượng nằm trong nhóm đã chọn.
+        #   - Không selection      -> toàn bộ đối tượng dùng material đó.
+        objs = []
+        for ident in idents:
+            entry = table.get(ident)
+            if entry:
+                objs.extend(entry["objects"])
         return selector.select_objects(objs, mode=mode)
 
     show_gui(selector, title, table, on_select)

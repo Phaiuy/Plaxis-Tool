@@ -12,8 +12,13 @@ dùng chung cho cả **PLAXIS 2D** và **PLAXIS 3D** thông qua Remote Scripting
 2. **Không chọn đối tượng nào** khi chạy tool → hiện bảng **toàn bộ** Material
    set (Identification) đang có trong mô hình.
 3. Chọn một hoặc nhiều dòng material set trong bảng rồi bấm **Select objects**
-   → tool sẽ chọn (highlight) toàn bộ đối tượng trong mô hình có material set
-   tương ứng. Đây chính là mục đích *select đối tượng theo material set*.
+   → tool sẽ chọn (highlight) các đối tượng có material set tương ứng, **đúng
+   theo phạm vi của bảng đang xem**:
+   - Nếu ban đầu có chọn sẵn một nhóm đối tượng → chỉ chọn lại những đối tượng
+     *nằm trong nhóm đó*.
+   - Nếu ban đầu không chọn gì → chọn toàn bộ đối tượng trong mô hình dùng
+     material set đó.
+   Đây chính là mục đích *select đối tượng theo material set*.
 
 Các loại đối tượng được quét: soil volumes, plates, beams, geogrids, embedded
 beams / rows, anchors (node-to-node, fixed-end), interfaces.
