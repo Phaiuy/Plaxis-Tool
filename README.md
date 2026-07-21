@@ -92,10 +92,14 @@ pms.run_from_plaxis(g_i)
 
 ## Ghi chú
 
-- Khi bấm **Select objects**, tool tự bổ sung cả **hình học cha** của từng
-  feature vào selection — Polygon (2D), SoilVolume/Volume (3D), Line, Surface…
-  (leo theo chuỗi `.Parent`). Nhờ đó đối tượng thực sự được highlight trong
-  model chứ không chỉ chọn "ngầm" feature.
+- Khi bấm **Select objects**, mặc định tool chọn **hình học cấp cao nhất**
+  của từng feature — Polygon (2D), SoilVolume/Volume (3D), Line, Surface…
+  (leo hết chuỗi `.Parent`). Đây đúng là cách PLAXIS chọn khi bạn click tay,
+  nên **Selection explorer hiện đầy đủ tham số chung** (tọa độ x/y/z, axis
+  function…) để hiệu chỉnh hàng loạt. Có thể đổi chế độ ngay trên giao diện:
+  - *Hình học (như chọn tay)* — mặc định, sửa được tham số chung;
+  - *Hình học + feature* — chọn cả hai;
+  - *Chỉ feature* — chỉ chọn Soil/Plate…
 - Chiều ngược lại cũng được xử lý: nếu bạn chọn tay một Polygon/Volume (hình
   học) rồi chạy tool, tool sẽ tìm material qua feature con (Soil, Plate…)
   nằm trong hình học đó.

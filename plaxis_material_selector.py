@@ -321,16 +321,60 @@ class MaterialSelector(object):
                 current = parent
         return result
 
-    def select_objects(self, objects, include_parents=True):
+    def top_geometry(self, objects):
         """
-        Đặt selection của PLAXIS Input thành `objects`.
+        Trả về hình học CẤP CAO NHẤT của từng feature (leo hết chuỗi .Parent),
+        khử trùng lặp. Feature không có Parent thì giữ nguyên chính nó.
 
-        include_parents=True (mặc định): tự bổ sung hình học cha (polygon /
-        soil volume / line / surface ...) của từng feature để đối tượng thực
-        sự được highlight trong model.
+        Đây là cách mô phỏng đúng thao tác chọn tay trong PLAXIS: khi click
+        một đối tượng, PLAXIS chọn hình học (Polygon/Line/Volume...) và
+        Selection explorer tự hiển thị các feature con cùng tham số chung
+        (tọa độ x/y/z, axis function...) để hiệu chỉnh hàng loạt. Nếu trộn cả
+        feature lẫn hình học vào selection thì Selection explorer không gộp
+        được tham số chung nữa.
+        """
+        result = []
+        seen = set()
+
+        def _key(o):
+            name = _object_name(o)
+            return name if name and name != "<object>" else id(o)
+
+        for obj in objects:
+            top = obj
+            for _ in range(5):
+                try:
+                    parent = _value(top.Parent)
+                except Exception:
+                    break
+                if parent is None:
+                    break
+                top = parent
+            k = _key(top)
+            if k not in seen:
+                seen.add(k)
+                result.append(top)
+        return result
+
+    def select_objects(self, objects, mode="geometry"):
+        """
+        Đặt selection của PLAXIS Input theo `objects`.
+
+        mode:
+          "geometry" (mặc định) - chỉ chọn hình học cấp cao nhất (Polygon /
+              SoilVolume / Line / Surface...), giống hệt chọn tay. Selection
+              explorer sẽ hiện đầy đủ tham số chung (tọa độ, axis function...)
+              để hiệu chỉnh hàng loạt.
+          "both"     - chọn cả feature lẫn hình học cha.
+          "feature"  - chỉ chọn feature (Soil, Plate...).
         """
         g_i = self.g_i
-        targets = self.expand_with_parents(objects) if include_parents else list(objects)
+        if mode == "geometry":
+            targets = self.top_geometry(objects)
+        elif mode == "both":
+            targets = self.expand_with_parents(objects)
+        else:
+            targets = list(objects)
 
         # Cách 1 (được plxscripting hỗ trợ chính thức): gán trực tiếp.
         try:
@@ -468,9 +512,23 @@ def show_gui(selector, title_suffix, table, on_select):
             values=(ident, entry.get("type", ""), len(entry["objects"])),
         )
 
+    # -- Chế độ chọn ------------------------------------------------------- #
+    mode_bar = tk.Frame(root)
+    mode_bar.pack(fill="x", padx=10)
+    mode_var = tk.StringVar(value="geometry")
+    tk.Label(mode_bar, text="Chọn theo:").pack(side="left")
+    for text, val in (
+        ("Hình học (như chọn tay - sửa được tọa độ...)", "geometry"),
+        ("Hình học + feature", "both"),
+        ("Chỉ feature", "feature"),
+    ):
+        tk.Radiobutton(mode_bar, text=text, value=val, variable=mode_var).pack(
+            side="left", padx=4
+        )
+
     # -- Thanh nút bên dưới ------------------------------------------------ #
     btn_bar = tk.Frame(root)
-    btn_bar.pack(fill="x", padx=10, pady=(0, 10))
+    btn_bar.pack(fill="x", padx=10, pady=(4, 10))
 
     status = tk.Label(root, text="", anchor="w", fg="#046307", padx=10)
     status.pack(fill="x", side="bottom")
@@ -484,7 +542,7 @@ def show_gui(selector, title_suffix, table, on_select):
             )
             return
         try:
-            n = on_select(idents)
+            n = on_select(idents, mode_var.get())
         except Exception as exc:  # noqa: BLE001
             messagebox.showerror("Lỗi", "Không chọn được đối tượng:\n%s" % exc)
             return
@@ -554,11 +612,9 @@ def run(g_i):
             "Bảng TOÀN BỘ Material set (Identification) trong mô hình:"
         )
 
-    def on_select(idents):
+    def on_select(idents, mode="geometry"):
         objs = selector.objects_with_identifications(idents)
-        # Tự bổ sung hình học cha (polygon / soil volume / line / surface)
-        # để đối tượng thực sự được highlight trong model.
-        return selector.select_objects(objs, include_parents=True)
+        return selector.select_objects(objs, mode=mode)
 
     show_gui(selector, title, table, on_select)
 
