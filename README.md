@@ -35,7 +35,34 @@ beams / rows, anchors (node-to-node, fixed-end), interfaces.
 
 ## Cách chạy
 
-### A) Chạy như script bên ngoài PLAXIS
+### A) Đưa vào PLAXIS qua **Expert → Python** (khuyên dùng)
+
+Đây chính là cách đưa tool vào menu Expert / Run Python để bấm là chạy ngay
+trong phiên PLAXIS đang mở — **không cần điền PORT/PASSWORD**. Khi PLAXIS chạy
+tool, nó tự truyền cổng và mật khẩu qua dòng lệnh, nên trong code
+`new_server()` gọi không tham số sẽ tự kết nối đúng phiên PLAXIS đó.
+
+Các bước:
+
+1. Mở **PLAXIS Input**.
+2. Menu **Expert → Python** (một số phiên bản là *Expert → Configure Python
+   tools* hoặc nút *Tools* trong cửa sổ Python).
+3. Chọn **Add / New tool** rồi trỏ tới file `plaxis_material_selector.py` này
+   (hoặc dán nội dung file vào một tool mới, đặt tên ví dụ
+   *"Material Set Selector"*).
+4. Lưu lại. Từ giờ tool sẽ xuất hiện trong danh sách để **Run**.
+
+Mỗi lần dùng:
+
+- Muốn xem/chọn theo material set của **một nhóm đối tượng cụ thể**: chọn sẵn
+  các đối tượng đó trong mô hình rồi Run tool.
+- Muốn xem **toàn bộ** material set trong mô hình: không chọn gì, Run tool.
+
+> Lưu ý: PLAXIS chạy tool bằng bản Python đi kèm của nó. Bản này thường có sẵn
+> `plxscripting` và `tkinter`, nên bảng sẽ hiện dạng cửa sổ. Nếu bản Python đó
+> không có `tkinter`, tool tự động in bảng ra console/log.
+
+### B) Chạy như script bên ngoài PLAXIS
 
 Mở `plaxis_material_selector.py`, sửa phần cấu hình đầu file cho khớp:
 
@@ -54,7 +81,7 @@ python plaxis_material_selector.py
 Một cửa sổ bảng (tkinter) sẽ hiện lên. Nếu môi trường không có tkinter, bảng
 sẽ được in ra console.
 
-### B) Chạy trực tiếp trong cửa sổ Python của PLAXIS
+### C) Chạy trực tiếp trong cửa sổ Python của PLAXIS
 
 Trong PLAXIS đã có sẵn biến `g_i`, chỉ cần:
 

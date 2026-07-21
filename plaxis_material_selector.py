@@ -26,11 +26,17 @@ Input (menu Expert) rồi điền PORT + PASSWORD bên dưới.
 
 Cách chạy
 ---------
-A) Chạy như script Python bên ngoài PLAXIS:
-       python plaxis_material_selector.py
-   (Nhớ cài: pip install plxscripting  và điền PORT/PASSWORD.)
+A) ĐƯA VÀO PLAXIS QUA "Expert -> Python -> ..." (khuyên dùng):
+   Đăng ký chính file này làm Python tool. Khi PLAXIS chạy tool, nó tự truyền
+   cổng + mật khẩu qua dòng lệnh, nên new_server() gọi KHÔNG THAM SỐ sẽ tự
+   kết nối đúng phiên PLAXIS đang mở. Không cần sửa PORT/PASSWORD.
+   (Xem hướng dẫn đăng ký tool ở README.)
 
-B) Chạy trực tiếp trong cửa sổ Python của PLAXIS (đã có sẵn biến g_i):
+B) Chạy như script Python bên ngoài PLAXIS:
+       python plaxis_material_selector.py
+   (Nhớ cài: pip install plxscripting  và điền PORT/PASSWORD bên dưới.)
+
+C) Chạy trực tiếp trong cửa sổ Python của PLAXIS (đã có sẵn biến g_i):
        run_from_plaxis(g_i)
 
 Author: Plaxis-Tool
@@ -288,7 +294,15 @@ def _material_type(mat):
 def connect(host=HOST, port=PORT, password=PASSWORD):
     """
     Kết nối tới PLAXIS Input remote scripting server, trả về (s_i, g_i).
-    Raise nếu thiếu plxscripting hoặc không kết nối được.
+
+    Thứ tự thử:
+      1) new_server() KHÔNG THAM SỐ - dùng khi file được PLAXIS chạy như một
+         Python tool (Expert -> Python). PLAXIS tự truyền host/cổng/mật khẩu
+         qua dòng lệnh nên không cần cấu hình gì.
+      2) new_server(host, port, password=...) - dùng khi chạy script độc lập
+         bên ngoài PLAXIS, lấy thông số từ HOST/PORT/PASSWORD đầu file.
+
+    Raise nếu thiếu plxscripting hoặc không kết nối được theo cả hai cách.
     """
     try:
         from plxscripting.easy import new_server
@@ -297,6 +311,14 @@ def connect(host=HOST, port=PORT, password=PASSWORD):
             "Chưa cài plxscripting. Chạy: pip install plxscripting"
         ) from exc
 
+    # (1) Chạy như PLAXIS tool: để plxscripting tự đọc tham số từ dòng lệnh.
+    try:
+        s_i, g_i = new_server()
+        return s_i, g_i
+    except Exception:
+        pass
+
+    # (2) Chạy độc lập: dùng cấu hình HOST/PORT/PASSWORD ở đầu file.
     kwargs = {}
     if password:
         kwargs["password"] = password
