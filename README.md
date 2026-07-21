@@ -141,8 +141,10 @@ Plaxis-Tool/
 
 ## Lưu ý
 
-- Trên Windows, thư viện `keyboard` cần chạy với quyền phù hợp để bắt phím tắt
-  toàn cục. Trên Linux có thể cần chạy bằng `sudo`.
+- Trên Windows, thư viện `keyboard` cần chạy với **quyền Administrator** để bắt phím
+  tắt toàn cục (trên Linux cần `sudo`). Cài đặt không cần quyền admin, nhưng khi chạy
+  thì cần. Xem hướng dẫn chi tiết: [docs/HUONG_DAN_KEYBOARD.md](docs/HUONG_DAN_KEYBOARD.md).
+  Trên Windows có thể nhấp đúp [`run_as_admin.bat`](run_as_admin.bat) để chạy nhanh với quyền Admin.
 - Tên hàm/tham số lệnh trong `plaxis_client.py` (`g_i.array`, `g_i.move`...) có thể
   khác nhau đôi chút giữa các phiên bản Plaxis (2D/3D, các bản khác nhau). Nếu gặp
   lỗi lệnh, hãy đối chiếu với tài liệu Remote Scripting của phiên bản Plaxis đang dùng
