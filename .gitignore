@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+plaxis_isolate_state*.json
