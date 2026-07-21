@@ -223,6 +223,21 @@ def build_report():
         L.append("KHONG LAY DUOC g_i -> khong the kiem tra. Xem huong dan o tren.")
         return "\n".join(L)
 
+    # [0] Bao cao vung chon (selection) - kiem tra selection co doc duoc khong
+    L.append("")
+    L.append("[0] Kiem tra g_i.selection (ban co dang chon doi tuong khong?):")
+    try:
+        sel = list(g_i.selection)
+        L.append("    So doi tuong dang chon: {}".format(len(sel)))
+        for o in sel[:20]:
+            L.append("      * {}".format(_obj_name(o)))
+        if not sel:
+            L.append("    => selection RONG. Neu ban CO chon doi tuong ma van rong")
+            L.append("       thi che do Run Python Tool khong giu duoc vung chon.")
+    except Exception as exc:
+        L.append("    Loi doc selection: {}".format(exc))
+    L.append("-" * 68)
+
     obj, source = _sample_object(g_i, L)
     L.append("")
     if obj is None:
@@ -275,6 +290,63 @@ def build_report():
             L.append("    - {:<28} = {}".format(n, v))
     else:
         L.append("    (khong tim thay thuoc tinh boolean nao)")
+    L.append("-" * 68)
+
+    # [4] Quet dir(g_i) tim ten lenh lien quan hien/an/chon
+    L.append("[4] Quet dir(g_i) tim lenh lien quan hien/an (vis/hid/show/isol/select):")
+    try:
+        names = [n for n in dir(g_i)]
+    except Exception as exc:
+        names = []
+        L.append("    Loi dir(g_i): {}".format(exc))
+    L.append("    (tong so ten g_i tra ve: {})".format(len(names)))
+    key = ("vis", "hid", "show", "isol", "select", "displa")
+    hits = [n for n in names if any(k in n.lower() for k in key)]
+    if hits:
+        for n in sorted(hits):
+            L.append("    -> {}".format(n))
+    else:
+        L.append("    (khong co ten nao khop)")
+    L.append("-" * 68)
+
+    # [5] Quet dir(obj)
+    L.append("[5] Quet dir(doi tuong) tim ten lien quan hien/an:")
+    try:
+        onames = [n for n in dir(obj)]
+    except Exception as exc:
+        onames = []
+        L.append("    Loi dir(obj): {}".format(exc))
+    ohits = [n for n in onames if any(k in n.lower() for k in key)]
+    if ohits:
+        for n in sorted(ohits):
+            L.append("    -> {}".format(n))
+    else:
+        L.append("    (khong co ten nao khop; tong {} ten)".format(len(onames)))
+    L.append("-" * 68)
+
+    # [6] Thu GOI cac lenh hide/show (co the lam an 1 doi tuong - hoi phuc duoc)
+    L.append("[6] Thu goi cac lenh hien/an (probe - an thu 1 doi tuong roi hien lai):")
+    L.append("    (Neu lenh khong ton tai se bao loi 'unknown command' hoac tuong tu)")
+    probe_cmds = ["hide", "show", "hidefromview", "showinview",
+                  "setvisible", "visible", "isolate"]
+    for cmd in probe_cmds:
+        try:
+            fn = getattr(g_i, cmd)
+        except Exception as exc:
+            L.append("    - {:<14}: getattr loi: {}".format(cmd, str(exc)[:120]))
+            continue
+        try:
+            res = fn(obj)
+            L.append("    - {:<14}: GOI DUOC! ket qua: {}".format(
+                cmd, str(res)[:160]))
+        except Exception as exc:
+            L.append("    - {:<14}: loi khi goi: {}".format(cmd, str(exc)[:160]))
+    # Co gang hien lai doi tuong vua thu an
+    for cmd in ("show", "showinview"):
+        try:
+            getattr(g_i, cmd)(obj)
+        except Exception:
+            pass
     L.append("=" * 68)
     L.append("HUONG DAN:")
     L.append(" - Neu thay ten ro rang la hien/an (Visible/Show/Hidden...),")
